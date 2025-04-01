@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cafetería</title>
+    <link rel="icon" type="image/x-icon" href="./images/favicon.ico">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <div class="content">
+        <h1>TICKETS GENERATOR</h1>
+        <p>Enter your code</p>
+        
+        <div class="input-container">
+            <input type="text" id="numeroInput" placeholder="Put your code here" maxlength="5">
+        </div>
+
+        <div class="default-image-container">
+            <img src="images/person_13924070.png" alt="Default User Image">
+        </div>
+
+        <div class="student-info">
+            <div class="image-container">
+                <img id="userImage" src="images/person_13924070.png" alt="User Image">
+            </div>
+            <div class="student-name">
+                <h2 id="studentName"></h2>
+            </div>
+        </div>
+    </div>
+
+    <script src="particles.js"></script>
+    <script src="main.js"></script>
+    <script>
+        numeroInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const codigo = this.value.trim();
+                if (codigo.length > 0) {
+                    validarCodigo(codigo);
+                }
+            }
+        });
+
+        // Asegurar que el input tenga el foco al cargar la página
+        numeroInput.focus();
+
+        // Mantener el foco en el input
+        document.addEventListener('click', function() {
+            numeroInput.focus();
+        });
+    </script>
+</body>
+<footer>
+    <p>®David Estuvo aqui 2025</p>
+</footer>
+</html> 

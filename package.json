@@ -1,0 +1,30 @@
+{
+  "name": "pruebas-cursor",
+  "version": "1.0.0",
+  "description": "Este proyecto implementa un sistema de validación de códigos con impresión automática de tickets usando una impresora Zebra ZD230.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev:server": "nodemon server.js",
+    "dev:client": "live-server --port=8000 --no-browser \"prueba 1\"",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "date-fns": "^4.1.0",
+    "express": "^4.21.2",
+    "googleapis": "^148.0.0",
+    "node-printer": "^1.0.4",
+    "node-thermal-printer": "^4.4.5",
+    "zebra-browser-print-wrapper": "^0.1.4"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "live-server": "^1.2.0",
+    "nodemon": "^3.1.0"
+  }
+}
