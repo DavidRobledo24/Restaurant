@@ -20,7 +20,8 @@ const auth = new google.auth.GoogleAuth({
 
 const sheets = google.sheets({ version: 'v4', auth });
 
-let testMode = true;
+// Modo de Prueba
+let testMode = false;
 
 app.use(cors());
 app.use(express.json());
@@ -89,8 +90,12 @@ app.post('/verificar', async (req, res) => {
 });
 
 app.post('/imprimir', async (req, res) => {
+    const tempFile = path.join(__dirname, 'ZDesigner ZD230-203dpi ZPL'); // Definir el archivo temporal al inicio
     try {
+        console.log('Solicitud recibida en /imprimir');
         const { codigo } = req.body;
+        console.log('Código recibido:', codigo);
+
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId,
             range: 'A:B'
@@ -98,68 +103,93 @@ app.post('/imprimir', async (req, res) => {
 
         const datos = response.data.values;
         const estudiante = datos.find(row => row[0] === codigo);
+        console.log('Estudiante encontrado:', estudiante);
 
         if (!estudiante) {
+            console.error('Código no válido:', codigo);
             return res.status(400).json({ success: false, message: 'Código no válido' });
         }
 
         const nombreEstudiante = estudiante[1];
+        console.log('Nombre del estudiante:', nombreEstudiante);
 
         const zplCommand = `
 ^XA
-^FO200,50
-^A0N,30,30
+^PW609
+^LL406
+^FO30,30
+^A0N,40,40
 ^FDTICKET DE VALIDACION^FS
-^FO200,100
-^A0N,25,25
+^FO30,80
+^A0N,30,30
 ^FDCODIGO: ${codigo}^FS
-^FO200,150
-^A0N,25,25
+^FO30,130
+^A0N,30,30
 ^FDESTUDIANTE: ${nombreEstudiante}^FS
-^FO200,200
-^A0N,25,25
+^FO30,180
+^A0N,30,30
 ^FDFECHA: ${new Date().toLocaleString()}^FS
-^FO50,250
-^GB700,1,3^FS
+^FO30,230
+^GB550,2,3^FS
 ^XZ
         `;
+        console.log('Comando ZPL generado:', zplCommand);
 
-        if (testMode) {
-            console.log('--------------------------');
-            console.log('MODO DE PRUEBA ACTIVADO');
-            console.log('Comando ZPL que se enviaría:');
-            console.log(zplCommand);
-            console.log('--------------------------');
-
-            res.json({ 
-                success: true, 
-                message: 'Ticket procesado en modo de prueba (no impreso)',
-                testMode: true,
-                zplCommand 
-            });
-            return;
-        }
-
-        const tempFile = path.join(__dirname, 'temp.zpl');
         fs.writeFileSync(tempFile, zplCommand);
+        console.log('Archivo temporal ZPL creado en:', tempFile);
 
-        const printCommand = `print /D:"\\localhost\ZDesigner ZD230-203dpi ZPL" "${tempFile}"`;
-        console.log("Enviando comando a la impresora:", printCommand);
+        const printCommand = `print /D:"ZDesigner ZD230-203dpi ZPL" "${tempFile}"`;
+        console.log('Comando de impresión generado:', printCommand);
 
         exec(printCommand, (error, stdout, stderr) => {
-            fs.unlinkSync(tempFile);
+            try {
+                if (error) {
+                    console.error('Error al imprimir con "print":', error);
+                    console.error('Detalles del error:', stderr);
 
-            if (error) {
-                console.error('Error al imprimir:', error);
-                res.status(500).json({ success: false, error: error.message });
-                return;
+                    // Intentar con el comando "copy" si "print" falla
+                    const fallbackCommand = `copy "${tempFile}" "USB001"`;
+                    console.log('Intentando con comando alternativo:', fallbackCommand);
+
+                    exec(fallbackCommand, (fallbackError, fallbackStdout, fallbackStderr) => {
+                        if (fallbackError) {
+                            console.error('Error al imprimir con comando alternativo "copy":', fallbackError);
+                            console.error('Detalles del error alternativo:', fallbackStderr);
+                            return res.status(500).json({ success: false, error: fallbackError.message });
+                        }
+
+                        console.log('Salida del comando alternativo "copy":', fallbackStdout);
+                        res.json({ success: true, message: 'Ticket impreso correctamente con comando alternativo' });
+                    });
+
+                    return;
+                }
+
+                console.log('Salida del comando de impresión "print":', stdout);
+                res.json({ success: true, message: 'Ticket impreso correctamente' });
+            } finally {
+                // Asegurarse de eliminar el archivo temporal en todos los casos
+                try {
+                    fs.unlinkSync(tempFile);
+                    console.log('Archivo temporal eliminado:', tempFile);
+                } catch (unlinkError) {
+                    console.error('Error al eliminar el archivo temporal:', unlinkError);
+                }
             }
-
-            res.json({ success: true, message: 'Ticket impreso correctamente' });
         });
     } catch (error) {
-        console.error('Error al imprimir:', error);
+        console.error('Error en el endpoint /imprimir:', error);
         res.status(500).json({ success: false, error: error.message });
+    } finally {
+        // Asegurarse de eliminar el archivo temporal si ocurre un error antes de la impresión
+        try {
+            if (fs.existsSync(tempFile)) {
+                fs.unlinkSync(tempFile);
+                console.log('Archivo temporal eliminado en finally:', tempFile);
+            }
+        } catch (unlinkError) {
+            console.error('Error al eliminar el archivo temporal en finally:', unlinkError);
+        }
     }
 });
 

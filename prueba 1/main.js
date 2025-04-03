@@ -85,6 +85,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     toast: true
                 });
 
+                // Llamar al endpoint /imprimir para generar el ticket
+                imprimirTicket(codigo);
+
                 // Ocultar el nombre después de 5 segundos
                 hideNameTimeout = setTimeout(ocultarNombre, 2000);
             } else {
@@ -107,6 +110,47 @@ document.addEventListener('DOMContentLoaded', function () {
         .finally(() => {
             numeroInput.value = '';
             numeroInput.focus();
+        });
+    }
+
+    // Función para llamar al endpoint /imprimir
+    function imprimirTicket(codigo) {
+        fetch('http://localhost:3000/imprimir', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ codigo })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Swal.fire({
+                //     title: 'Ticket generado e impreso ✅',
+                //     icon: 'success',
+                //     timer: 2000,
+                //     showConfirmButton: false,
+                //     position: 'top',
+                //     background: '#4CAF50',
+                //     color: '#fff',
+                //     toast: true
+                // });
+            } else {
+                throw new Error(data.message || 'Error al generar el ticket');
+            }
+        })
+        .catch(error => {
+            Swal.fire({
+                title: 'Error al imprimir ❌',
+                text: error.message,
+                icon: 'error',
+                timer: 2000,
+                showConfirmButton: false,
+                position: 'top',
+                background: '#f44336',
+                color: '#fff',
+                toast: true
+            });
         });
     }
 });
