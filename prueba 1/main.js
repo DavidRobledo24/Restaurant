@@ -120,37 +120,23 @@ document.addEventListener('DOMContentLoaded', function () {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ codigo })
+            body: JSON.stringify({
+                contenido: {
+                    codigo: codigo
+                }
+            })
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Swal.fire({
-                //     title: 'Ticket generado e impreso ✅',
-                //     icon: 'success',
-                //     timer: 2000,
-                //     showConfirmButton: false,
-                //     position: 'top',
-                //     background: '#4CAF50',
-                //     color: '#fff',
-                //     toast: true
-                // });
-            } else {
-                throw new Error(data.message || 'Error al generar el ticket');
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error al imprimir el ticket');
             }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Ticket impreso correctamente:', data);
         })
         .catch(error => {
-            Swal.fire({
-                title: 'Error al imprimir ❌',
-                text: error.message,
-                icon: 'error',
-                timer: 2000,
-                showConfirmButton: false,
-                position: 'top',
-                background: '#f44336',
-                color: '#fff',
-                toast: true
-            });
+            console.error('Error al imprimir el ticket:', error);
         });
     }
 });
