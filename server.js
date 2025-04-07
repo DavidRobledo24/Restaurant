@@ -21,7 +21,7 @@ const auth = new google.auth.GoogleAuth({
 const sheets = google.sheets({ version: 'v4', auth });
 
 // Modo de Prueba
-let testMode = false;
+let testMode = true;
 
 app.use(cors());
 app.use(express.json());
@@ -73,14 +73,18 @@ app.post('/verificar', async (req, res) => {
         const { codigo } = req.body;
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId,
-            range: 'A:B'
+            range: 'A:D' // Incluir la columna D que contiene las imágenes
         });
 
         const datos = response.data.values;
         const estudiante = datos.find(row => row[0] === codigo);
 
         if (estudiante) {
-            res.json({ success: true, nombre: estudiante[1] });
+            res.json({ 
+                success: true, 
+                nombre: estudiante[1], 
+                imagen: estudiante[3] // URL de la imagen
+            });
         } else {
             res.status(400).json({ success: false, message: 'Código no válido' });
         }

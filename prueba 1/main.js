@@ -44,6 +44,17 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // Ajustar el evento keydown para manejar códigos de barras
+    numeroInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const codigo = this.value.trim();
+            if (codigo.length > 0) {
+                validarCodigo(codigo); // Validar el código automáticamente
+            }
+        }
+    });
+
     // Mantener el foco en el input
     function mantenerFoco() {
         numeroInput.focus();
@@ -51,6 +62,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     numeroInput.focus();
     document.addEventListener('click', mantenerFoco);
+
+    // Asegurar que el input esté siempre enfocado para recibir códigos
+    document.addEventListener('click', function () {
+        numeroInput.focus();
+    });
 
     // Función para ocultar el nombre del estudiante
     function ocultarNombre() {

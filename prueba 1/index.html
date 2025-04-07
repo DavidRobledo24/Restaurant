@@ -18,10 +18,13 @@
         </div>
 
         <div class="default-image-container">
-            <img src="images/person_13924070.png" alt="Default User Image">
+            <img id="studentImage" src="images/person_13924070.png" alt="Default User Image">
         </div>
 
         <div class="student-info">
+            <div class="studentImag">
+                <img src="" alt="" id="studentImage">
+            </div>
             <div class="student-name">
                 <h2 id="studentName"></h2>
             </div>
@@ -31,6 +34,26 @@
     <script src="particles.js"></script>
     <script src="main.js"></script>
     <script>
+        async function validarCodigo(codigo) {
+            try {
+                const response = await fetch('http://localhost:3000/verificar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ codigo })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('studentName').textContent = data.nombre;
+                    document.getElementById('studentImag').src = data.imagen || 'images/person_13924070.png';
+                } else {
+                    Swal.fire('Error', data.message, 'error');
+                }
+            } catch (error) {
+                Swal.fire('Error', 'No se pudo validar el código', 'error');
+            }
+        }
+
         numeroInput.addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -53,4 +76,4 @@
 <footer>
     <p>®David Estuvo aqui 2025</p>
 </footer>
-</html> 
+</html>
