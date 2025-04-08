@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 imprimirTicket(codigo);
 
                 // Ocultar el nombre y restablecer la imagen después de 5 segundos
-                hideNameTimeout = setTimeout(ocultarNombre, 2000);
+                hideNameTimeout = setTimeout(ocultarNombre, 3000);
             } else {
                 throw new Error(data.message);
             }
