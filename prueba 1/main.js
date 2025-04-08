@@ -68,11 +68,13 @@ document.addEventListener('DOMContentLoaded', function () {
         numeroInput.focus();
     });
 
-    // Función para ocultar el nombre del estudiante
+    // Función para ocultar el nombre y restablecer la imagen predeterminada
     function ocultarNombre() {
         clearTimeout(hideNameTimeout);
         studentInfo.classList.remove('visible');
         studentName.textContent = '';
+        const imgElement = document.getElementById('defaultImage');
+        imgElement.src = 'images/person_13924070.png'; // Restablecer la imagen predeterminada
     }
 
     // Función para validar el código y traer el nombre del estudiante
@@ -90,6 +92,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 studentName.textContent = data.nombre; // Nombre obtenido de Google Sheets
                 studentInfo.classList.add('visible'); // Muestra la sección con el nombre
 
+                const imgElement = document.getElementById('defaultImage');
+                if (data.imagen) {
+                    const fileId = data.imagen.split('id=')[1]; // Extraer el ID del archivo
+                    imgElement.src = `http://localhost:3000/proxy-image?id=${fileId}`;
+                } else {
+                    imgElement.src = 'images/person_13924070.png';
+                }
+
                 Swal.fire({
                     title: `Código válido ✅`,
                     icon: 'success',
@@ -104,7 +114,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 // Llamar al endpoint /imprimir para generar el ticket
                 imprimirTicket(codigo);
 
-                // Ocultar el nombre después de 5 segundos
+                // Ocultar el nombre y restablecer la imagen después de 5 segundos
                 hideNameTimeout = setTimeout(ocultarNombre, 2000);
             } else {
                 throw new Error(data.message);

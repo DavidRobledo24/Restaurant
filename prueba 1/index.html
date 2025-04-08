@@ -18,13 +18,13 @@
         </div>
 
         <div class="default-image-container">
-            <img id="studentImage" src="images/person_13924070.png" alt="Default User Image">
+            <img id="defaultImage" src="images/person_13924070.png" alt="Default User Image">
         </div>
 
         <div class="student-info">
-            <div class="studentImag">
-                <img src="" alt="" id="studentImage">
-            </div>
+            <!-- <div class="image-container">
+                <img id="studentImage" src="" alt="Student Image">
+            </div> -->
             <div class="student-name">
                 <h2 id="studentName"></h2>
             </div>
@@ -43,13 +43,34 @@
                 });
 
                 const data = await response.json();
+                
                 if (data.success) {
                     document.getElementById('studentName').textContent = data.nombre;
-                    document.getElementById('studentImag').src = data.imagen || 'images/person_13924070.png';
+                    const imgElement = document.getElementById('defaultImage');
+                    
+                    // Limpiar caché del navegador forzando parámetro único
+                    const timestamp = new Date().getTime();
+                    const imageUrl = data.imagen ? `${data.imagen}&t=${timestamp}` : 'images/person_13924070.png';
+                    
+                    imgElement.onload = function() {
+                        console.log('Imagen cargada correctamente');
+                    };
+                    
+                    imgElement.onerror = function() {
+                        console.error('Error al cargar la imagen:', imageUrl);
+                        this.src = 'images/person_13924070.png';
+                    };
+                    
+                    imgElement.src = imageUrl;
+                    document.querySelector('.student-info').classList.add('visible');
                 } else {
+                    document.getElementById('studentName').textContent = '';
+                    document.getElementById('defaultImage').src = 'images/person_13924070.png';
+                    document.querySelector('.student-info').classList.remove('visible');
                     Swal.fire('Error', data.message, 'error');
                 }
             } catch (error) {
+                console.error('Error al validar código:', error);
                 Swal.fire('Error', 'No se pudo validar el código', 'error');
             }
         }

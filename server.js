@@ -4,6 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const { google } = require('googleapis');
 const { exec } = require('child_process');
+const axios = require('axios'); // Asegúrate de instalar axios con `npm install axios`
+const sharp = require('sharp'); // Asegúrate de instalar sharp con `npm install sharp`
 
 const app = express();
 const port = 3000;
@@ -26,6 +28,7 @@ let testMode = true;
 app.use(cors());
 app.use(express.json());
 
+// Endpoint de prueba
 app.get('/test', (req, res) => {
     res.json({ message: 'Conexión exitosa con el servidor' });
 });
@@ -36,12 +39,13 @@ app.post('/toggleTestMode', (req, res) => {
 });
 
 app.get('/testMode', (req, res) => {
-    res.json({ 
+    res.json({
         testMode,
         message: `Modo de prueba está ${testMode ? 'activado' : 'desactivado'}`
     });
 });
 
+// Obtener códigos y nombres
 async function obtenerCodigos() {
     try {
         const range = 'A:B';
@@ -68,35 +72,117 @@ async function obtenerCodigos() {
     }
 }
 
+// Verificar enlace de imagen
+async function verificarEnlaceImagen(url) {
+    try {
+        const response = await axios.head(url); // Realizar una solicitud HEAD para verificar el enlace
+        return response.status === 200; // Retornar true si el enlace es accesible
+    } catch (error) {
+        console.error('Error verificando enlace de imagen:', error.message);
+        return false;
+    }
+}
+
+// Verificar código y devolver imagen/nombre
 app.post('/verificar', async (req, res) => {
     try {
         const { codigo } = req.body;
+
+        // Consultar solo el rango necesario
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId,
-            range: 'A:D' // Incluir la columna D que contiene las imágenes
+            range: 'A:D' // Incluye columna de la imagen
         });
 
         const datos = response.data.values;
-        const estudiante = datos.find(row => row[0] === codigo);
+        const estudiante = datos.find(row => row[0] === codigo); // Buscar solo el código específico
 
         if (estudiante) {
-            res.json({ 
-                success: true, 
-                nombre: estudiante[1], 
-                imagen: estudiante[3] // URL de la imagen
+            const nombre = estudiante[1];
+            const imagenOriginal = estudiante[3] || null;
+            let imagenFinal = null;
+
+            if (imagenOriginal) {
+                const match = imagenOriginal.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                if (match && match[1]) {
+                    const fileId = match[1];
+                    imagenFinal = `https://drive.google.com/uc?export=view&id=${fileId}`;
+                } else {
+                    imagenFinal = imagenOriginal; // Usar el enlace original si no es de Google Drive
+                }
+            }
+
+            res.json({
+                success: true,
+                nombre,
+                imagen: imagenFinal
             });
         } else {
             res.status(400).json({ success: false, message: 'Código no válido' });
         }
     } catch (error) {
+        console.error('Error en verificar:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
 
-// Función para verificar el estado de la impresora
+// Crear el directorio de caché si no existe
+const cacheDir = path.join(__dirname, 'cache');
+if (!fs.existsSync(cacheDir)) {
+    fs.mkdirSync(cacheDir);
+}
+
+app.get('/proxy-image', async (req, res) => {
+    const { id } = req.query; // Obtener el ID de la imagen desde la query string
+    if (!id) {
+        return res.status(400).json({ success: false, message: 'Falta el parámetro "id"' });
+    }
+
+    const cachedImagePath = path.join(cacheDir, `${id}.jpg`); // Ruta de la imagen en caché
+
+    // Verificar si la imagen ya está en caché
+    if (fs.existsSync(cachedImagePath)) {
+        console.log(`Sirviendo imagen desde caché: ${cachedImagePath}`);
+        return res.sendFile(cachedImagePath);
+    }
+
+    const googleDriveUrl = `https://drive.google.com/uc?export=view&id=${id}`;
+    try {
+        const response = await axios.get(googleDriveUrl, { responseType: 'stream' });
+        const tempImagePath = path.join(cacheDir, `${id}-temp.jpg`);
+        const writeStream = fs.createWriteStream(tempImagePath);
+
+        response.data.pipe(writeStream);
+
+        writeStream.on('finish', async () => {
+            try {
+                // Redimensionar la imagen y guardarla en caché
+                await sharp(tempImagePath)
+                    .resize(300, 300) // Cambiar el tamaño a 300x300 píxeles
+                    .toFile(cachedImagePath);
+
+                fs.unlinkSync(tempImagePath); // Eliminar la imagen temporal
+                console.log(`Imagen redimensionada y guardada en caché: ${cachedImagePath}`);
+                res.sendFile(cachedImagePath);
+            } catch (error) {
+                console.error('Error al redimensionar la imagen:', error.message);
+                res.status(500).json({ success: false, message: 'Error al procesar la imagen' });
+            }
+        });
+
+        writeStream.on('error', (error) => {
+            console.error('Error al guardar la imagen temporal:', error.message);
+            res.status(500).json({ success: false, message: 'Error al guardar la imagen' });
+        });
+    } catch (error) {
+        console.error('Error al obtener la imagen desde Google Drive:', error.message);
+        res.status(500).json({ success: false, message: 'No se pudo obtener la imagen' });
+    }
+});
+
+// Verificar estado de impresora
 function verificarImpresora() {
     return new Promise((resolve, reject) => {
-        const exec = require('child_process').exec;
         exec('wmic printer get name,portname,status', (error, stdout, stderr) => {
             if (error) {
                 console.error('Error al verificar impresora:', error);
@@ -109,21 +195,19 @@ function verificarImpresora() {
     });
 }
 
+// Endpoint para imprimir
 app.post('/imprimir', async (req, res) => {
-    const tempFile = path.join(__dirname, 'temp.zpl'); // Archivo temporal para el comando ZPL
+    const tempFile = path.join(__dirname, 'temp.zpl');
     try {
         const { contenido } = req.body;
-
-        // Validar que el cuerpo de la solicitud tenga el formato correcto
         if (!contenido || !contenido.codigo) {
             return res.status(400).json({ success: false, message: 'El campo "contenido.codigo" es obligatorio' });
         }
 
-        // Crear el comando ZPL con texto alineado y sin caracteres especiales
         const zplCommand = `
 ^XA
 ^FO200,50
-^A0N,30,30
+^A0N,30,30^GB700,1,3^FS
 ^FDTICKET DE VALIDACION^FS
 ^FO200,100
 ^A0N,25,25
@@ -137,56 +221,49 @@ app.post('/imprimir', async (req, res) => {
         `;
 
         if (testMode) {
-            // En modo de prueba, solo logueamos el comando ZPL
             console.log('MODO DE PRUEBA - Comando ZPL que se enviaría:', zplCommand);
-            res.json({ 
-                success: true, 
+            res.json({
+                success: true,
                 message: 'Ticket procesado en modo de prueba (no impreso)',
                 testMode: true,
-                zplCommand 
+                zplCommand
             });
             return;
         }
 
-        // Guardar el comando ZPL en un archivo temporal
         fs.writeFileSync(tempFile, zplCommand);
-        console.log('Archivo temporal ZPL creado en:', tempFile);
+        console.log('Archivo temporal ZPL creado:', tempFile);
 
-        // Enviar a la impresora usando el comando de Windows
-        const exec = require('child_process').exec;
         const printCommand = `copy "${tempFile}" "\\\\localhost\\ZDesigner ZD230-203dpi ZPL"`;
 
         exec(printCommand, (error, stdout, stderr) => {
-            // Eliminar el archivo temporal
-            try {
-                fs.unlinkSync(tempFile);
-                console.log('Archivo temporal eliminado:', tempFile);
-            } catch (unlinkError) {
-                console.error('Error al eliminar el archivo temporal:', unlinkError);
-            }
-
             if (error) {
                 console.error('Error al imprimir:', error);
-                console.error('Detalles del error:', stderr);
                 res.status(500).json({ success: false, error: error.message });
                 return;
             }
 
-            console.log('Salida del comando de impresión:', stdout);
+            console.log('Impresión exitosa:', stdout);
             res.json({ success: true, message: 'Ticket impreso correctamente' });
-        });
 
-    } catch (error) {
-        console.error('Error en el endpoint /imprimir:', error);
-
-        // Intentar eliminar el archivo temporal si ocurre un error
-        try {
             if (fs.existsSync(tempFile)) {
-                fs.unlinkSync(tempFile);
-                console.log('Archivo temporal eliminado tras error:', tempFile);
+                try {
+                    fs.unlinkSync(tempFile);
+                    console.log('Archivo temporal eliminado:', tempFile);
+                } catch (unlinkError) {
+                    console.error('Error al eliminar archivo temporal:', unlinkError);
+                }
             }
-        } catch (unlinkError) {
-            console.error('Error al eliminar el archivo temporal tras error:', unlinkError);
+        });
+    } catch (error) {
+        console.error('Error en /imprimir:', error);
+
+        if (fs.existsSync(tempFile)) {
+            try {
+                fs.unlinkSync(tempFile);
+            } catch (unlinkError) {
+                console.error('Error limpiando archivo tras fallo:', unlinkError);
+            }
         }
 
         res.status(500).json({ success: false, error: error.message });
