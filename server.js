@@ -23,7 +23,7 @@ const auth = new google.auth.GoogleAuth({
 const sheets = google.sheets({ version: 'v4', auth });
 
 // Modo de Prueba
-let testMode = true;
+let testMode = false;
 
 app.use(cors());
 app.use(express.json());
@@ -117,10 +117,10 @@ app.post('/verificar', async (req, res) => {
             } else if (tipoAlimentacion === 'REFRIGERIO Y ALMUERZO' && horaActual >= 9 && horaActual < 14) {
                 if (horaActual >= 9 && horaActual < 11) {
                     puedeReclamar = true;
-                    tipoPermitido = 'REFRIGERIO'; // Usar tipoPermitido para indicar la opción actual
+                    tipoPermitido = 'REFRIGERIO';
                 } else if (horaActual >= 12 && horaActual < 14) {
                     puedeReclamar = true;
-                    tipoPermitido = 'ALMUERZO'; // Usar tipoPermitido para indicar la opción actual
+                    tipoPermitido = 'ALMUERZO';
                 }
             }
 
@@ -220,27 +220,62 @@ function verificarImpresora() {
     });
 }
 
-// Endpoint para imprimir
+// Array de palabras relacionadas con comida
+const foodWords = [
+    "apple", "banana", "bread", "butter", "carrot", "cheese", "chicken", "chocolate", "coffee", "cookie",
+    "corn", "cream", "cucumber", "egg", "fish", "flour", "garlic", "grape", "honey", "ice cream",
+    "juice", "lemon", "lettuce", "meat", "milk", "mushroom", "noodles", "onion", "orange", "pasta",
+    "peach", "pear", "pepper", "pizza", "potato", "rice", "salad", "salt", "sandwich", "soup",
+    "spinach", "steak", "strawberry", "sugar", "tea", "tomato", "water", "watermelon", "yogurt", "zucchini"
+];
+
+// Función para obtener la palabra del día
+function obtenerPalabraDelDia() {
+    const fechaActual = new Date();
+    const diaDelAño = Math.floor((fechaActual - new Date(fechaActual.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
+    return foodWords[diaDelAño % foodWords.length]; // Seleccionar palabra basada en el día del año
+}
+
+// Función para formatear la fecha
+function formatearFecha(fecha) {
+    const opciones = {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false // Deshabilitar formato AM/PM
+    };
+    return new Intl.DateTimeFormat('es-ES', opciones).format(fecha);
+}
+
 app.post('/imprimir', async (req, res) => {
-    const tempFile = path.join(__dirname, 'temp.zpl');
+    const tempFile = path.join(__dirname, 'temp.zpl'); // Archivo temporal para el comando ZPL
     try {
         const { contenido } = req.body;
+
         if (!contenido || !contenido.codigo) {
             return res.status(400).json({ success: false, message: 'El campo "contenido.codigo" es obligatorio' });
         }
 
+        const palabraDelDia = obtenerPalabraDelDia(); // Obtener la palabra del día
+        const fechaFormateada = formatearFecha(new Date()); // Formatear la fecha actual
+
         const zplCommand = `
 ^XA
 ^FO200,50
-^A0N,30,30^GB700,1,3^FS
+^A0N,30,30
 ^FDTICKET DE VALIDACION^FS
 ^FO200,100
 ^A0N,25,25
 ^FDCODIGO: ${contenido.codigo}^FS
 ^FO200,150
 ^A0N,25,25
-^FDFECHA: ${new Date().toLocaleString()}^FS
-^FO50,200
+^FDFECHA: ${fechaFormateada}^FS
+^FO200,200
+^A0N,25,25
+^FDPALABRA DEL DIA: ${palabraDelDia.toUpperCase()}^FS
+^FO50,250
 ^GB700,1,3^FS
 ^XZ
         `;
