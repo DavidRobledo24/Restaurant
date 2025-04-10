@@ -91,7 +91,7 @@ app.post('/verificar', async (req, res) => {
         // Consultar solo el rango necesario
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId,
-            range: 'A:D' // Incluye columna de la imagen
+            range: 'A:D' // Incluye columna de la imagen y tipo de alimentación
         });
 
         const datos = response.data.values;
@@ -99,8 +99,30 @@ app.post('/verificar', async (req, res) => {
 
         if (estudiante) {
             const nombre = estudiante[1];
+            const tipoAlimentacion = estudiante[2] || 'NINGUNO'; // Columna C
             const imagenOriginal = estudiante[3] || null;
             let imagenFinal = null;
+
+            // Determinar el tipo de alimentación permitido según la hora actual
+            const horaActual = new Date().getHours();
+            let puedeReclamar = false;
+            let tipoPermitido = 'NINGUNO';
+
+            if (tipoAlimentacion === 'REFRIGERIO' && horaActual >= 9 && horaActual < 11) {
+                puedeReclamar = true;
+                tipoPermitido = 'REFRIGERIO';
+            } else if (tipoAlimentacion === 'ALMUERZO' && horaActual >= 12 && horaActual < 14) {
+                puedeReclamar = true;
+                tipoPermitido = 'ALMUERZO';
+            } else if (tipoAlimentacion === 'REFRIGERIO Y ALMUERZO' && horaActual >= 9 && horaActual < 14) {
+                if (horaActual >= 9 && horaActual < 11) {
+                    puedeReclamar = true;
+                    tipoPermitido = 'REFRIGERIO'; // Usar tipoPermitido para indicar la opción actual
+                } else if (horaActual >= 12 && horaActual < 14) {
+                    puedeReclamar = true;
+                    tipoPermitido = 'ALMUERZO'; // Usar tipoPermitido para indicar la opción actual
+                }
+            }
 
             if (imagenOriginal) {
                 const match = imagenOriginal.match(/\/d\/([a-zA-Z0-9_-]+)/);
@@ -115,6 +137,9 @@ app.post('/verificar', async (req, res) => {
             res.json({
                 success: true,
                 nombre,
+                tipoAlimentacion,
+                puedeReclamar,
+                tipoPermitido,
                 imagen: imagenFinal
             });
         } else {

@@ -27,6 +27,7 @@
             </div> -->
             <div class="student-name">
                 <h2 id="studentName"></h2>
+                <h2 id="tipoAlimentacion"></h2>
             </div>
         </div>
     </div>
@@ -46,6 +47,7 @@
                 
                 if (data.success) {
                     document.getElementById('studentName').textContent = data.nombre;
+                    document.getElementById('tipoAlimentacion').textContent = data.tipoPermitido;
                     const imgElement = document.getElementById('defaultImage');
                     
                     // Limpiar caché del navegador forzando parámetro único

@@ -100,16 +100,31 @@ document.addEventListener('DOMContentLoaded', function () {
                     imgElement.src = 'images/person_13924070.png';
                 }
 
-                Swal.fire({
-                    title: `Código válido ✅`,
-                    icon: 'success',
-                    timer: 2000,
-                    showConfirmButton: false,
-                    position: 'top',
-                    background: '#4CAF50',
-                    color: '#fff',
-                    toast: true
-                });
+                // Mostrar mensaje sobre el tipo de alimentación
+                if (data.puedeReclamar) {
+                    Swal.fire({
+                        title: `Puede reclamar ${data.tipoPermitido} ✅`,
+                        icon: 'success',
+                        timer: 3000,
+                        showConfirmButton: false,
+                        position: 'top',
+                        background: '#4CAF50',
+                        color: '#fff',
+                        toast: true
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'No puede reclamar alimentación ❌',
+                        text: `Tipo asignado: ${data.tipoAlimentacion}`,
+                        icon: 'warning',
+                        timer: 3000,
+                        showConfirmButton: false,
+                        position: 'top',
+                        background: '#FFC107',
+                        color: '#000',
+                        toast: true
+                    });
+                }
 
                 // Llamar al endpoint /imprimir para generar el ticket
                 imprimirTicket(codigo);
