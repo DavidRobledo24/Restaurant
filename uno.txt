@@ -1,0 +1,5 @@
+let uno, dos, suma;
+
+suma = uno + dos;
+
+console.log(suma)
