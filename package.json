@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev:server": "nodemon server.js",
-    "dev:client": "live-server --port=8000 --no-browser \"prueba 1\"",
+    "dev:client": "live-server --port=8000 --no-browser \"Principal\"",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\""
   },
   "keywords": [],
