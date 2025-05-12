@@ -21,13 +21,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let hideNameTimeout; // Variable para el temporizador
 
-    // Validar automáticamente cuando se ingresan 5 números
+    // Modificar el evento input para solo limpiar el input
     numeroInput.addEventListener('input', function () {
-        this.value = this.value.replace(/[^\d]/g, '').slice(0, 5);
+        this.value = this.value.replace(/[^\d]/g, '').slice(0, 8);
         ocultarNombre(); // Oculta el nombre al escribir otro valor
-        if (this.value.length === 5) {
-            validarCodigo(this.value);
-        }
     });
 
     // Validar cuando se pega contenido
@@ -36,15 +33,12 @@ document.addEventListener('DOMContentLoaded', function () {
         const pastedText = (e.clipboardData || window.clipboardData).getData('text');
         const codigo = pastedText.trim();
         if (/^\d*$/.test(codigo)) {
-            this.value = codigo.slice(0, 5);
+            this.value = codigo.slice(0, 8);
             ocultarNombre();
-            if (this.value.length === 5) {
-                validarCodigo(this.value);
-            }
         }
     });
 
-    // Ajustar el evento keydown para manejar códigos de barras
+    // Ajustar el evento keydown para validar solo con Enter
     numeroInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -78,80 +72,93 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Función para validar el código y traer el nombre del estudiante
-    function validarCodigo(codigo) {
-        fetch('http://localhost:3000/verificar', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ codigo })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                studentName.textContent = data.nombre; // Nombre obtenido de Google Sheets
-                studentInfo.classList.add('visible'); // Muestra la sección con el nombre
+    async function validarCodigo(codigo) {
+        try {
+            const response = await fetch('http://localhost:3000/verificar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ codigo })
+            });
 
-                const imgElement = document.getElementById('defaultImage');
-                if (data.imagen) {
-                    const fileId = data.imagen.split('id=')[1]; // Extraer el ID del archivo
-                    imgElement.src = `http://localhost:3000/proxy-image?id=${fileId}`;
-                } else {
-                    imgElement.src = 'images/person_13924070.png';
-                }
-
-                // Mostrar mensaje sobre el tipo de alimentación
-                if (data.puedeReclamar) {
+            const data = await response.json();
+            
+            if (!data.success) {
+                if (data.gradoNoPermitido) {
                     Swal.fire({
-                        title: `Puede reclamar ${data.tipoPermitido} ✅`,
-                        icon: 'success',
-                        timer: 3000,
+                        icon: 'warning',
+                        title: 'No Autorizado',
+                        text: 'Estudiante no autorizado',
+                        timer: 2000,
                         showConfirmButton: false,
                         position: 'top',
-                        background: '#4CAF50',
+                        background: '#f44336',
                         color: '#fff',
                         toast: true
                     });
                 } else {
                     Swal.fire({
-                        title: 'No puede reclamar alimentación ❌',
-                        text: `Tipo asignado: ${data.tipoAlimentacion}`,
-                        icon: 'warning',
-                        timer: 3000,
+                        title: 'Código no válido ❌',
+                        text: data.message,
+                        icon: 'error',
+                        timer: 2000,
                         showConfirmButton: false,
                         position: 'top',
-                        background: '#FFC107',
-                        color: '#000',
+                        background: '#f44336',
+                        color: '#fff',
                         toast: true
                     });
                 }
-
-                // Llamar al endpoint /imprimir para generar el ticket
-                imprimirTicket(codigo);
-
-                // Ocultar el nombre y restablecer la imagen después de 5 segundos
-                hideNameTimeout = setTimeout(ocultarNombre, 3000);
-            } else {
-                throw new Error(data.message);
+                return;
             }
-        })
-        .catch(error => {
-            Swal.fire({
-                title: 'Código no válido ❌',
-                text: error.message,
-                icon: 'error',
-                timer: 2000,
-                showConfirmButton: false,
-                position: 'top',
-                background: '#f44336',
-                color: '#fff',
-                toast: true
-            });
-        })
-        .finally(() => {
+
+            studentName.textContent = data.nombre; // Nombre obtenido de Google Sheets
+            studentInfo.classList.add('visible'); // Muestra la sección con el nombre
+
+            const imgElement = document.getElementById('defaultImage');
+            if (data.imagen) {
+                const fileId = data.imagen.split('id=')[1]; // Extraer el ID del archivo
+                imgElement.src = `http://localhost:3000/proxy-image?id=${fileId}`;
+            } else {
+                imgElement.src = 'images/person_13924070.png';
+            }
+
+            // Mostrar mensaje sobre el tipo de alimentación
+            if (data.puedeReclamar) {
+                Swal.fire({
+                    title: `Puede reclamar ${data.tipoPermitido} ✅`,
+                    icon: 'success',
+                    timer: 3000,
+                    showConfirmButton: false,
+                    position: 'top',
+                    background: '#4CAF50',
+                    color: '#fff',
+                    toast: true
+                });
+            } else {
+                Swal.fire({
+                    title: 'No puede reclamar alimentación ❌',
+                    text: `Tipo asignado: ${data.tipoAlimentacion}`,
+                    icon: 'warning',
+                    timer: 3000,
+                    showConfirmButton: false,
+                    position: 'top',
+                    background: '#FFC107',
+                    color: '#000',
+                    toast: true
+                });
+            }
+
+            // Llamar al endpoint /imprimir para generar el ticket
+            imprimirTicket(codigo);
+
+            // Ocultar el nombre y restablecer la imagen después de 5 segundos
+            hideNameTimeout = setTimeout(ocultarNombre, 3000);
+        } catch (error) {
+            console.error('Error:', error);
+        } finally {
             numeroInput.value = '';
             numeroInput.focus();
-        });
+        }
     }
 
     // Función para llamar al endpoint /imprimir
