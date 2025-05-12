@@ -17,13 +17,16 @@ const spreadsheetId = '1tgzjQeTLgSlX7dPWexUeHlho9VezCIGUC2BI6fTzFCA';
 // Autenticación con Google Sheets API
 const auth = new google.auth.GoogleAuth({
     credentials,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly']
+    scopes: [
+        'https://www.googleapis.com/auth/spreadsheets.readonly',
+        'https://www.googleapis.com/auth/spreadsheets'
+    ]
 });
 
 const sheets = google.sheets({ version: 'v4', auth });
 
 // Modo de Prueba
-let testMode = false;
+let testMode = true;
 
 app.use(cors());
 app.use(express.json());
@@ -83,71 +86,26 @@ async function verificarEnlaceImagen(url) {
     }
 }
 
+const ValidadorComida = require('./validarComida');
+const validador = new ValidadorComida(sheets, spreadsheetId);
+
 // Verificar código y devolver imagen/nombre
 app.post('/verificar', async (req, res) => {
     try {
         const { codigo } = req.body;
-
-        // Consultar solo el rango necesario
-        const response = await sheets.spreadsheets.values.get({
-            spreadsheetId,
-            range: 'A:D' // Incluye columna de la imagen y tipo de alimentación
-        });
-
-        const datos = response.data.values;
-        const estudiante = datos.find(row => row[0] === codigo); // Buscar solo el código específico
-
-        if (estudiante) {
-            const nombre = estudiante[1];
-            const tipoAlimentacion = estudiante[2] || 'NINGUNO'; // Columna C
-            const imagenOriginal = estudiante[3] || null;
-            let imagenFinal = null;
-
-            // Determinar el tipo de alimentación permitido según la hora actual
-            const horaActual = new Date().getHours();
-            let puedeReclamar = false;
-            let tipoPermitido = 'NINGUNO';
-
-            if (tipoAlimentacion === 'REFRIGERIO' && horaActual >= 9 && horaActual < 11) {
-                puedeReclamar = true;
-                tipoPermitido = 'REFRIGERIO';
-            } else if (tipoAlimentacion === 'ALMUERZO' && horaActual >= 12 && horaActual < 14) {
-                puedeReclamar = true;
-                tipoPermitido = 'ALMUERZO';
-            } else if (tipoAlimentacion === 'REFRIGERIO Y ALMUERZO' && horaActual >= 9 && horaActual < 14) {
-                if (horaActual >= 9 && horaActual < 11) {
-                    puedeReclamar = true;
-                    tipoPermitido = 'REFRIGERIO';
-                } else if (horaActual >= 12 && horaActual < 14) {
-                    puedeReclamar = true;
-                    tipoPermitido = 'ALMUERZO';
-                }
-            }
-
-            if (imagenOriginal) {
-                const match = imagenOriginal.match(/\/d\/([a-zA-Z0-9_-]+)/);
-                if (match && match[1]) {
-                    const fileId = match[1];
-                    imagenFinal = `https://drive.google.com/uc?export=view&id=${fileId}`;
-                } else {
-                    imagenFinal = imagenOriginal; // Usar el enlace original si no es de Google Drive
-                }
-            }
-
-            res.json({
-                success: true,
-                nombre,
-                tipoAlimentacion,
-                puedeReclamar,
-                tipoPermitido,
-                imagen: imagenFinal
-            });
+        const resultado = await validador.verificarEstudiante(codigo);
+        
+        if (resultado.success) {
+            res.json(resultado);
         } else {
-            res.status(400).json({ success: false, message: 'Código no válido' });
+            res.status(400).json(resultado);
         }
     } catch (error) {
         console.error('Error en verificar:', error);
-        res.status(500).json({ success: false, error: error.message });
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
     }
 });
 
