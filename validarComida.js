@@ -11,12 +11,19 @@ class ValidadorComida {
     async registrarReclamo(codigo, tipoPermitido) {
         try {
             const nombreHoja = tipoPermitido === 'REFRIGERIO' ? 'Refrigerios' : 'Almuerzos';
-            const fecha = new Date().toLocaleDateString('es-ES'); // Formato: DD/MM/YYYY
+            const fecha = new Date();
+            const fechaFormateada = fecha.toLocaleDateString('es-ES'); // DD/MM/YYYY
+            const horaFormateada = fecha.toLocaleTimeString('es-ES', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: false 
+            }); // HH:MM
+            const registroCompleto = `${fechaFormateada} ${horaFormateada}`;
 
             // 1. Obtener datos actuales de la hoja
             const response = await this.sheets.spreadsheets.values.get({
                 spreadsheetId: this.spreadsheetId,
-                range: `${nombreHoja}!A:ZZ` // Obtener todas las columnas posibles
+                range: `${nombreHoja}!A:ZZ`
             });
 
             const filas = response.data.values || [];
@@ -39,28 +46,22 @@ class ValidadorComida {
                 filaIndice = filas.length;
             }
 
-            // 3. Encontrar o crear columna para la fecha actual
-            const encabezados = filas[0] || [];
-            let columnaIndice = encabezados.indexOf(fecha);
-            
-            if (columnaIndice === -1) {
-                // Si la columna de la fecha no existe, crearla
-                columnaIndice = encabezados.length;
-                const columnaLetra = this.numeroAColumna(columnaIndice + 1);
-
-                // Actualizar encabezado con la nueva fecha
-                await this.sheets.spreadsheets.values.update({
-                    spreadsheetId: this.spreadsheetId,
-                    range: `${nombreHoja}!${columnaLetra}1`,
-                    valueInputOption: 'RAW',
-                    resource: {
-                        values: [[fecha]]
-                    }
-                });
+            // 3. Encontrar primera columna vacía después del código
+            const filaEstudiante = filas[filaIndice] || [];
+            let columnaIndice = 1; // Empezamos desde la columna B (índice 1)
+            while (columnaIndice < filaEstudiante.length && filaEstudiante[columnaIndice]) {
+                columnaIndice++;
             }
 
             // 4. Verificar si ya reclamó hoy
-            const reclamoHoy = filas[filaIndice] && filas[filaIndice][columnaIndice] === 'X';
+            const hoy = fechaFormateada;
+            const reclamoHoy = filaEstudiante.some(celda => {
+                if (celda && celda.includes(hoy)) {
+                    return true;
+                }
+                return false;
+            });
+
             if (reclamoHoy) {
                 return {
                     success: false,
@@ -68,14 +69,14 @@ class ValidadorComida {
                 };
             }
 
-            // 5. Registrar el reclamo
+            // 5. Registrar el reclamo en la primera columna vacía
             const columnaLetra = this.numeroAColumna(columnaIndice + 1);
             await this.sheets.spreadsheets.values.update({
                 spreadsheetId: this.spreadsheetId,
                 range: `${nombreHoja}!${columnaLetra}${filaIndice + 1}`,
                 valueInputOption: 'RAW',
                 resource: {
-                    values: [['X']]
+                    values: [[registroCompleto]]
                 }
             });
 
@@ -107,14 +108,14 @@ class ValidadorComida {
         if (tipoAlimentacion === 'REFRIGERIO' && horaActual >= 5 && horaActual < 11) {
             puedeReclamar = true;
             tipoPermitido = 'REFRIGERIO';
-        } else if (tipoAlimentacion === 'ALMUERZO' && horaActual >= 12 && horaActual < 20) {
+        } else if (tipoAlimentacion === 'ALMUERZO' && horaActual >= 11 && horaActual < 20) {
             puedeReclamar = true;
             tipoPermitido = 'ALMUERZO';
         } else if (tipoAlimentacion === 'REFRIGERIO Y ALMUERZO') {
             if (horaActual >= 5 && horaActual < 11) {
                 puedeReclamar = true;
                 tipoPermitido = 'REFRIGERIO';
-            } else if (horaActual >= 12 && horaActual < 20) {
+            } else if (horaActual >= 11 && horaActual < 20) {
                 puedeReclamar = true;
                 tipoPermitido = 'ALMUERZO';
             }

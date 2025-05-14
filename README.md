@@ -123,13 +123,12 @@ npm run dev:client
    - Verificar permisos
    - Comprobar enlaces Drive
 
-   Mejorar el registro de reclamos.
 
    Manejo de las imagenes dentro del sistema - comprimir imagenes.
    Modulo para la descarga de imagenes locales con el nombre del codigo correspondiente.
 
    Validacion diaria de cambios en la base de datos.
 
-   Lectura de codigo a tiempo de real, validacion instantanea
+   Lectura de codigo a tiempo de real, validacion instantanea.
 
    
