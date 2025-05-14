@@ -4,93 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cafetería</title>
-    <link rel="icon" type="image/x-icon" href="./images/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
-    <div class="content">
-        <h1>TICKETS GENERATOR</h1>
+    <div class="main-flex">
+    <img src="images/sin fondo 1.png" alt="jaggy" class="jaggy">
+        <div class="content">
+            <h1>TICKETS GENERATOR</h1>
                 
-        <div class="input-container">
-            <input type="text" id="numeroInput" placeholder="Put your code here">
-        </div>
+            <div class="input-container">
+                <input type="text" id="numeroInput" placeholder="Put your code here">
+            </div>
 
-        <div class="default-image-container">
-            <img id="defaultImage" src="images/person_13924070.png" alt="Default User Image">
-        </div>
+            <div class="default-image-container">
+                <img id="defaultImage" src="images/person_13924070.png" alt="Default User Image">
+            </div>
 
-        <div class="student-info">
-            <div class="student-name">
-                <h2 id="studentName"></h2>
-                <h2 id="tipoAlimentacion"></h2>
+            <div class="student-info">
+                <div class="student-name">
+                    <h2 id="studentName"></h2>
+                    <h2 id="tipoAlimentacion"></h2>
+                </div>
             </div>
         </div>
+        <img src="images/sin fondo 1.png" alt="jaggy" class="jaggy">
     </div>
 
     <script src="particles.js"></script>
     <script src="main.js"></script>
-    <script>
-        async function validarCodigo(codigo) {
-            try {
-                const response = await fetch('http://localhost:3000/verificar', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ codigo })
-                });
-
-                const data = await response.json();
-                
-                if (data.success) {
-                    document.getElementById('studentName').textContent = data.nombre;
-                    document.getElementById('tipoAlimentacion').textContent = data.tipoPermitido;
-                    const imgElement = document.getElementById('defaultImage');
-                    
-                    // Limpiar caché del navegador forzando parámetro único
-                    const timestamp = new Date().getTime();
-                    const imageUrl = data.imagen ? `${data.imagen}&t=${timestamp}` : 'images/person_13924070.png';
-                    
-                    imgElement.onload = function() {
-                        console.log('Imagen cargada correctamente');
-                    };
-                    
-                    imgElement.onerror = function() {
-                        console.error('Error al cargar la imagen:', imageUrl);
-                        this.src = 'images/person_13924070.png';
-                    };
-                    
-                    imgElement.src = imageUrl;
-                    document.querySelector('.student-info').classList.add('visible');
-                } else {
-                    document.getElementById('studentName').textContent = '';
-                    document.getElementById('defaultImage').src = 'images/person_13924070.png';
-                    document.querySelector('.student-info').classList.remove('visible');
-                    Swal.fire('Error', data.message, 'error');
-                }
-            } catch (error) {
-                console.error('Error al validar código:', error);
-                Swal.fire('Error', 'No se pudo validar el código', 'error');
-            }
-        }
-
-        numeroInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const codigo = this.value.trim();
-                if (codigo.length > 0) {
-                    validarCodigo(codigo);
-                }
-            }
-        });
-
-        // Asegurar que el input tenga el foco al cargar la página
-        numeroInput.focus();
-
-        // Mantener el foco en el input
-        document.addEventListener('click', function() {
-            numeroInput.focus();
-        });
-    </script>
 </body>
 <footer>
     <p>®David Estuvo aqui 2025</p>
