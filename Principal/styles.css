@@ -24,7 +24,7 @@ body {
     backdrop-filter: blur(5px);
     max-width: 650px;
     margin: 0;
-    
+    height: 470px;
 }
 
 h1 {
@@ -35,7 +35,7 @@ h1 {
 
 p {
     color: rgba(255, 255, 255, 0.9);
-    margin-bottom: 30px;
+    margin-bottom: 0px;
 }
 
 .input-container {
@@ -167,7 +167,7 @@ p {
     width: 150px;
     height: auto;
     margin-left: 20px;
-    display: block;
+    /* display: block; */
 }
 
 .main-flex {
@@ -177,4 +177,15 @@ p {
     width: 100%;
     margin-top: 30px;
     gap: 0;
+}
+
+footer {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    left: 1;
+    text-align: center;
+    padding: 5px;
+    color: white;
+    font-size: 14px;
 }

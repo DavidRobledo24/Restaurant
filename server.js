@@ -4,17 +4,15 @@ const fs = require('fs');
 const path = require('path');
 const { google } = require('googleapis');
 const { exec } = require('child_process');
-const axios = require('axios'); // Asegúrate de instalar axios con `npm install axios`
-const sharp = require('sharp'); // Asegúrate de instalar sharp con `npm install sharp`
+const axios = require('axios');
+const sharp = require('sharp');
 
 const app = express();
 const port = 3000;
 
-// Cargar credenciales de Google Sheets
 const credentials = require('./bd-restaurante-455516-0e578bc4c013.json');
 const spreadsheetId = '1tgzjQeTLgSlX7dPWexUeHlho9VezCIGUC2BI6fTzFCA';
 
-// Autenticación con Google Sheets API
 const auth = new google.auth.GoogleAuth({
     credentials,
     scopes: [
@@ -31,7 +29,6 @@ let testMode = true;
 app.use(cors());
 app.use(express.json());
 
-// Endpoint de prueba
 app.get('/test', (req, res) => {
     res.json({ message: 'Conexión exitosa con el servidor' });
 });
@@ -208,7 +205,7 @@ function formatearFecha(fecha) {
 }
 
 app.post('/imprimir', async (req, res) => {
-    const tempFile = path.join(__dirname, 'temp.zpl'); // Archivo temporal para el comando ZPL
+    const tempFile = path.join(__dirname, 'temp.zpl'); 
     try {
         const { contenido } = req.body;
 
@@ -216,8 +213,8 @@ app.post('/imprimir', async (req, res) => {
             return res.status(400).json({ success: false, message: 'El campo "contenido.codigo" es obligatorio' });
         }
 
-        const palabraDelDia = obtenerPalabraDelDia(); // Obtener la palabra del día
-        const fechaFormateada = formatearFecha(new Date()); // Formatear la fecha actual
+        const palabraDelDia = obtenerPalabraDelDia(); 
+        const fechaFormateada = formatearFecha(new Date()); 
 
         const zplCommand = `
 ^XA
