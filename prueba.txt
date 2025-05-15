@@ -1,5 +1,1 @@
-<<<<<<< HEAD
 Prueba prueba prueba
-=======
-el error continua
->>>>>>> db727cd481169ce664d7042ff54a89d684513eb4
