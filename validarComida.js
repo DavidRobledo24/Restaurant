@@ -31,7 +31,27 @@ class ValidadorComida {
                 throw new Error(`La hoja ${nombreHoja} está vacía`);
             }
 
-            // 2. Encontrar o crear fila para el código
+            // 2. Buscar o crear la columna para la fecha de hoy en la fila de encabezados (fila 0)
+            let encabezados = filas[0];
+            let columnaIndice = encabezados.indexOf(fechaFormateada);
+
+            if (columnaIndice === -1) {
+                // Si la fecha no existe, agregarla al final
+                columnaIndice = encabezados.length;
+                const columnaLetra = this.numeroAColumna(columnaIndice + 1);
+                await this.sheets.spreadsheets.values.update({
+                    spreadsheetId: this.spreadsheetId,
+                    range: `${nombreHoja}!${columnaLetra}1`,
+                    valueInputOption: 'RAW',
+                    resource: {
+                        values: [[fechaFormateada]]
+                    }
+                });
+                // Actualizar encabezados en memoria
+                encabezados.push(fechaFormateada);
+            }
+
+            // 3. Encontrar o crear fila para el código
             let filaIndice = filas.findIndex(fila => fila[0] === codigo);
             if (filaIndice === -1) {
                 // Si el código no existe, agregarlo
@@ -46,30 +66,16 @@ class ValidadorComida {
                 filaIndice = filas.length;
             }
 
-            // 3. Encontrar primera columna vacía después del código
-            const filaEstudiante = filas[filaIndice] || [];
-            let columnaIndice = 1; // Empezamos desde la columna B (índice 1)
-            while (columnaIndice < filaEstudiante.length && filaEstudiante[columnaIndice]) {
-                columnaIndice++;
-            }
-
             // 4. Verificar si ya reclamó hoy
-            const hoy = fechaFormateada;
-            const reclamoHoy = filaEstudiante.some(celda => {
-                if (celda && celda.includes(hoy)) {
-                    return true;
-                }
-                return false;
-            });
-
-            if (reclamoHoy) {
+            const filaEstudiante = filas[filaIndice] || [];
+            if (filaEstudiante[columnaIndice]) {
                 return {
                     success: false,
                     message: `Ya reclamaste tu ${tipoPermitido.toLowerCase()} hoy`
                 };
             }
 
-            // 5. Registrar el reclamo en la primera columna vacía
+            // 5. Registrar el reclamo en la columna correspondiente a la fecha
             const columnaLetra = this.numeroAColumna(columnaIndice + 1);
             await this.sheets.spreadsheets.values.update({
                 spreadsheetId: this.spreadsheetId,
