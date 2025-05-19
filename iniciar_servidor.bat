@@ -1,3 +1,3 @@
 @echo off
-cd /d "C:\Users\Tech\Documents\Restaurant"
-npm run dev 
+cd /d "%~dp0"
+npm run dev
